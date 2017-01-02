@@ -65,17 +65,22 @@ def copy(src, dest, mode='dryrun'):
                 logging.debug('Not searching ' + join(root, dirname))
                 dirs.remove(dirname)
 
-        # TODO: remove fcount and enumerate
-        for fcount, fname in enumerate(files):
+        for fname in files:
             # Ignore every file except JPEGs
             if not (fname.endswith('.jpg') or fname.endswith('.JPG')):
-                logging.debug('Ignoring ' + join(root, fname))
+                logging.info('Ignoring ' + join(root, fname))
                 continue
 
             jpegs_found += 1
             fpath = join(root, fname)
             logging.debug('Found ' + fpath)
-            exif = piexif.load(fpath)
+
+            try:
+                exif = piexif.load(fpath)
+
+            except ValueError:
+                logging.exception('Could not read ' + fpath)
+                continue
 
             try:
                 year, month = parse_date(exif['Exif'][DATETIME_ORIGINAL])
@@ -93,16 +98,17 @@ def copy(src, dest, mode='dryrun'):
                 continue
 
             # If file is not in the correct folder, make the folder(s)
-            try:
-                if not os.path.isdir(dest_dir):
-                    os.makedirs(dest_dir)
+            if not mode == 'dryrun':
+                try:
+                    if not os.path.isdir(dest_dir):
+                        os.makedirs(dest_dir)
 
-                else:
-                    logging.debug('Folder already exists: ' + dest_dir)
+                    else:
+                        logging.debug('Folder already exists: ' + dest_dir)
 
-            except OSError:
-                logging.exception('Cannot create {}.'.format(dest_dir))
-                continue
+                except OSError:
+                    logging.exception('Cannot create {}.'.format(dest_dir))
+                    continue
 
             try:
                 if mode == 'copy':
@@ -120,11 +126,8 @@ def copy(src, dest, mode='dryrun'):
                     logging.info(msg.format(fpath, dest_dir))
 
             except OSError:
-                logging.exception('Cannot copy file.')
+                logging.exception('Cannot copy or move file.')
                 continue
-
-            if fcount > 1:
-                break
 
     logging.info('Copied or moved {} out of {}'.format(
                     jpegs_copied, jpegs_found))
