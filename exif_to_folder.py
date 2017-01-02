@@ -9,7 +9,7 @@ import shutil
 
 import piexif
 
-__version__ = '1.0'
+__version__ = '1.1'
 
 # http://www.awaresystems.be/imaging/tiff/tifftags/privateifd/exif/datetimeoriginal.html
 DATETIME_ORIGINAL = 36867
@@ -137,15 +137,6 @@ def parse_date(date_str):
     """Return the year and month as a tuple."""
     strng = date_str.decode()
     return strng[0:4], strng[5:7]
-
-
-def is_in_folder(path, dest, year, month):
-    """Return true if path ends with /YYYY/MM and is in the correct
-    destination folder.
-    """
-    correct_dirs = path[-8:] == '/{}/{}'.format(year, month)
-    correct_dest = path[:-8] == dest
-    return correct_dirs and correct_dest
 
 
 if __name__ == '__main__':
