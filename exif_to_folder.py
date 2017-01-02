@@ -1,10 +1,10 @@
 """Copy or move images into year/month folders."""
 
 import argparse
+from datetime import date
 import logging
 import os
 from os.path import join
-import pathlib
 import shutil
 
 import piexif
@@ -15,13 +15,15 @@ __version__ = '1.1'
 DATETIME_ORIGINAL = 36867
 """EXIF key for original date time of photo."""
 
+LOGGING_FILENAME = str(date.today()) + ' exif_to_folder.log'
+
 
 def main():
     args = parse_args()
-    logging.basicConfig(level=args.loglevel)
+    setup_logging(level=args.loglevel)
     logging.debug('Parsed args: ' + str(args))
 
-    copy(str(args.src), str(args.dest), args.mode)
+    copy(args.src, args.dest, args.mode)
 
     print('Finished successfully')
 
@@ -37,17 +39,41 @@ def parse_args():
                         choices=('move', 'copy', 'dryrun'))
 
     msg = 'path of source folder.  Default is current folder.'
-    parser.add_argument('-s', '--src', default=os.curdir, help=msg,
-                        type=pathlib.Path)
+    parser.add_argument('-s', '--src', default=os.curdir, help=msg)
 
     msg = 'path of destination folder. Default is current folder.'
-    parser.add_argument('-d', '--dest', default=os.curdir, help=msg,
-                        type=pathlib.Path)
+    parser.add_argument('-d', '--dest', default=os.curdir, help=msg)
 
     msg = 'logging level: DEBUG=10; INFO=20; WARNING=30; ERROR=40; FATAL=50'
     parser.add_argument('-l', '--loglevel', help=msg, default=20, type=int)
 
     return parser.parse_args()
+
+
+def setup_logging(level=logging.INFO):
+    """Set up logging."""
+    logger = logging.getLogger()
+    logger.setLevel(level)
+
+    # Remove any existing handlers
+    for handler in logger.handlers:
+        logger.removeHandler(handler)
+
+    # Create a file handler to log to a file
+    fh = logging.FileHandler(LOGGING_FILENAME)
+    fh.setLevel(level)
+    logger.addHandler(fh)
+
+    # Create a stream handler to log to the terminal
+    sh = logging.StreamHandler()
+    sh.setLevel(level)
+    logger.addHandler(sh)
+
+    fmt = '%(asctime)s %(levelname)-8s %(name)s %(message)s'
+    formatter = logging.Formatter(fmt)
+
+    for handler in logger.handlers:
+        handler.setFormatter(formatter)
 
 
 def copy(src, dest, mode='dryrun'):
