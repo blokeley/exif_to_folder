@@ -1,4 +1,4 @@
-"""Setup commands for the exif_to_folder package.
+"""Setup commands for the sort_media package.
 
 See:
 https://packaging.python.org/en/latest/distributing.html
@@ -39,18 +39,18 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(
-    name='exif_to_folder',
+    name='sort_media',
 
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version=find_version('', 'exif_to_folder.py'),
+    version=find_version('', 'sort_media.py'),
 
-    description='Copy or move iamges to folder based on EXIF date',
+    description='Copy or move iamges to folder based on EXIF date or filename',
     long_description=long_description,
 
     # The project's main homepage.
-    url='https://github.com/blokeley/exif_to_folder/',
+    url='https://github.com/blokeley/sort_media/',
 
     # Author details
     author='blokeley',
@@ -65,7 +65,7 @@ setup(
         #   3 - Alpha
         #   4 - Beta
         #   5 - Production/Stable
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
 
         # Indicate who your project is intended for
         'Intended Audience :: Developers',
@@ -79,8 +79,7 @@ setup(
         # that you indicate whether you support Python 2, Python 3 or both.
         'Programming Language :: Python :: 3 :: Only',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.4',
-        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
     ],
 
     # What does your project relate to?
@@ -94,6 +93,6 @@ setup(
 
     # Create executable script(s)
     entry_points={
-        'console_scripts': ['exif_to_folder=exif_to_folder:main'],
+        'console_scripts': ['sort_media=sort_media:main'],
     }
 )
