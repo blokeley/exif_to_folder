@@ -1,6 +1,7 @@
 """Copy or move images into year/month folders."""
 
 import argparse
+from datetime import date
 import json
 import logging
 import logging.config
@@ -20,12 +21,23 @@ __version__ = '1.2'
 DATETIME_ORIGINAL = 36867
 """EXIF key for original date time of photo."""
 
+# Warn if year of file creation is unlikely
+YEAR_MAX = date.today().year + 1
+YEAR_MIN = 1945
+
 IGNORED = (
-    re.compile(r'\.picasa\.ini$'),
-    re.compile(r'\.log$'),
-    re.compile(r'\.json$'),
+    r'^Picasa2\\',
+    r'^Picasa2Albums\\',
+    r'\.Picasa3Temp',
+    r'\.ini$',
+    r'\.log$',
+    r'\.json$',
+    r'\.rss$',
+    r'\.url$',
+    r'\.pmp$',
+    r'\.db$',
     )
-"""Sequence of file names to ignore."""
+"""Sequence of folder and file names to ignore."""
 
 
 def parse_args() -> argparse.Namespace:
@@ -64,17 +76,23 @@ def setup_logging() -> None:
         logging.basicConfig(level=debug, format=fmt, datefmt='%H:%M:%S')
 
 
-def get_paths(src_dir: Path) -> Iterator[Path]:
+def get_paths(src_dir: Path, *, ignored: Sequence[str]=IGNORED) \
+        -> Iterator[Path]:
     """Generate valid file paths under the src_dir directory."""
     logger = logging.getLogger('get_paths')
+
     for root, dirs, files in os.walk(src_dir):
         # Remove hidden directories
         for dirname in dirs:
-            if dirname.startswith('.'):
-                logger.debug('Not searching ' + os.path.join(root, dirname))
+            if any(re.search(pattern, dirname) for pattern in ignored):
+                logger.debug('Ignoring folder: ' + os.path.join(root, dirname))
                 dirs.remove(dirname)
 
         for fname in files:
+            if any(re.search(pattern, fname) for pattern in ignored):
+                logger.debug('Ignoring file: ' + os.path.join(root, fname))
+                continue
+
             yield Path(root, fname)
 
 
@@ -87,15 +105,20 @@ def date_from_exif(src_file: Path) -> Sequence[str]:
         return date_from_str(exif['Exif'][DATETIME_ORIGINAL].decode())
 
     except struct.error:
-        logger.exception(f'struct.error parsing {src_file}')
+        logger.warning(f'struct.error parsing {src_file}')
         raise
 
     except ValueError as ex:
-        logger.debug(f'ValueError {ex} when reading {src_file}')
+        ex_type = ex.__class__.__name__
+        logger.debug(f'{ex_type}: {ex} when reading {src_file}')
         raise
 
     except KeyError:
-        logger.debug(f'EXIF date not found in {src_file}')
+        logger.debug(f'No date in EXIF for {src_file}')
+        raise
+
+    except Exception:
+        logger.exception('Unexpected exception')
         raise
 
 
@@ -103,14 +126,17 @@ def date_from_str(text: str) -> Sequence[str]:
     """Get the date tuple (year, month) from the text string."""
     logger = logging.getLogger('date_from_str')
 
-    # Match 4 digits, then any of -:\/ then 2 digits
-    match = re.search(r'(\d{4})[-:\\/]?(\d{2})', text)
+    # No leading digit, then 1 or 2 followed by 3 digits (for years 1ddd and
+    # 2ddd), then any of -:\/ then 2 digits, then any of -:\/ then optional 2
+    # digits, then no trailing digits
+    pattern = r'(?<!\d)([12]\d{3})[-:\\/]?(\d{2})[-:\\/]?(?:\d{2})?(?!\d)'
+    match = re.search(pattern, text)
 
     if match:
         return match.group(1, 2)
 
     else:
-        msg = f'Could not find date in string {text}'
+        msg = f'Could not find date in string "{text}"'
         logger.debug(msg)
         raise ValueError(msg)
 
@@ -140,14 +166,17 @@ def copy(src_file: Path, dest_dir: Path, mode: str='dryrun') -> None:
         if mode == 'copy':
             shutil.copy2(src_file, dest_file)
             logger.info(f'Copied {src_file} to {dest_file}')
+            return
 
         elif mode == 'move':
             shutil.move(src_file, dest_file)
             logger.info(f'Moved {src_file} to {dest_file}')
+            return
 
         else:
             msg = f'Would have moved or copied {src_file} to {dest_file}'
             logger.info(msg)
+            return
 
     except OSError:
         logger.exception(f'Cannot copy or move {src_file} to {dest_file}')
@@ -160,11 +189,6 @@ def main() -> int:
     logger = logging.getLogger('main')
 
     for src_file in get_paths(args.src):
-
-        if any(regex.search(str(src_file)) for regex in IGNORED):
-            logger.debug(f'Ignoring {src_file}')
-            continue
-
         try:
             # Try getting year and month from EXIF data
             year, month = date_from_exif(src_file)
@@ -176,12 +200,15 @@ def main() -> int:
 
             except Exception:
                 try:
-                    # Try getting date from source directory name
+                    # Try getting date from source folder name(s)
                     year, month = date_from_str(str(src_file.parent))
 
                 except Exception:
                     logger.warning(f'Could not get date for {src_file}')
                     continue
+
+        if YEAR_MAX < int(year) < YEAR_MIN:
+            logger.warning(f'Year {year} found for {src_file}')
 
         dest_dir = args.dest / year / month
         copy(src_file, dest_dir, args.mode)

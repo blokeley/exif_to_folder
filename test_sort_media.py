@@ -30,6 +30,19 @@ class TestDateFromFilename(unittest.TestCase):
             with self.subTest(test=test):
                 self.assertEqual(test[0], sort_media.date_from_str(test[1]))
 
+    def test_not_dates(self):
+        tests = (
+            r'photos\n567590041_1431887_2516.jpg',
+            (r'photos\2005\New York\232323232%7Ffp58=ot)2346=495=967=XROQDF)'
+             r'23237;5 86978ot1lsi.jpg'),
+        )
+
+        for test in tests:
+            with self.subTest(test=test):
+                with self.assertRaises(ValueError):
+                    result = sort_media.date_from_str(test)
+                    print(f'ERROR: {test} returned {result}')
+
 
 if __name__ == '__main__':
     unittest.main()
