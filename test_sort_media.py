@@ -44,5 +44,23 @@ class TestDateFromFilename(unittest.TestCase):
                     print(f'ERROR: {test} returned {result}')
 
 
+class TestIgnore(unittest.TestCase):
+
+    def test_ignored(self):
+        tests = (
+            r'.Picasa3Temp',
+            r'.Picasa3Temp_1',
+            r'Picasa2',
+            r'Picasa2Albums',
+            r'something.json',
+            r'path\Thumbs.db',
+            r'sort_media.log',
+        )
+
+        for test in tests:
+            with self.subTest(test=test):
+                self.assertTrue(sort_media.ignore(test))
+
+
 if __name__ == '__main__':
     unittest.main()

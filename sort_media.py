@@ -15,7 +15,7 @@ from typing import Iterator, Sequence
 
 import piexif
 
-__version__ = '1.2'
+__version__ = '1.3'
 
 # http://www.awaresystems.be/imaging/tiff/tifftags/privateifd/exif/datetimeoriginal.html
 DATETIME_ORIGINAL = 36867
@@ -26,16 +26,16 @@ YEAR_MAX = date.today().year + 1
 YEAR_MIN = 1945
 
 IGNORED = (
-    r'^Picasa2\\',
-    r'^Picasa2Albums\\',
-    r'\.Picasa3Temp',
+    r'^Picasa2',
+    r'^Picasa2Albums',
+    r'^\.Picasa3Temp',
     r'\.ini$',
-    r'\.log$',
+    r'\.db$',
     r'\.json$',
+    r'\.log$',
     r'\.rss$',
     r'\.url$',
     r'\.pmp$',
-    r'\.db$',
     )
 """Sequence of folder and file names to ignore."""
 
@@ -76,21 +76,27 @@ def setup_logging() -> None:
         logging.basicConfig(level=debug, format=fmt, datefmt='%H:%M:%S')
 
 
-def get_paths(src_dir: Path, *, ignored: Sequence[str]=IGNORED) \
-        -> Iterator[Path]:
+def ignore(path: str, *, ignored: Sequence[str]=IGNORED) -> bool:
+    """Return True if path should be ignored, False otherwise."""
+    return any(re.search(pattern, path) for pattern in ignored)
+
+
+def get_paths(src_dir: Path) -> Iterator[Path]:
     """Generate valid file paths under the src_dir directory."""
     logger = logging.getLogger('get_paths')
 
     for root, dirs, files in os.walk(src_dir):
         # Remove hidden directories
         for dirname in dirs:
-            if any(re.search(pattern, dirname) for pattern in ignored):
-                logger.debug('Ignoring folder: ' + os.path.join(root, dirname))
+            path = os.path.join(root, dirname)
+            if ignore(path):
+                logger.debug(f'Ignoring folder: {path}')
                 dirs.remove(dirname)
 
         for fname in files:
-            if any(re.search(pattern, fname) for pattern in ignored):
-                logger.debug('Ignoring file: ' + os.path.join(root, fname))
+            path = os.path.join(root, fname)
+            if ignore(path):
+                logger.debug(f'Ignoring file: {path}')
                 continue
 
             yield Path(root, fname)
@@ -105,16 +111,16 @@ def date_from_exif(src_file: Path) -> Sequence[str]:
         return date_from_str(exif['Exif'][DATETIME_ORIGINAL].decode())
 
     except struct.error:
-        logger.warning(f'struct.error parsing {src_file}')
+        logger.debug(f'struct.error parsing {src_file}')
+        raise
+
+    except KeyError:
+        logger.debug(f'No date in EXIF for {src_file}')
         raise
 
     except ValueError as ex:
         ex_type = ex.__class__.__name__
         logger.debug(f'{ex_type}: {ex} when reading {src_file}')
-        raise
-
-    except KeyError:
-        logger.debug(f'No date in EXIF for {src_file}')
         raise
 
     except Exception:
@@ -148,9 +154,14 @@ def copy(src_file: Path, dest_dir: Path, mode: str='dryrun') -> None:
     """
     logger = logging.getLogger('copy')
     dest_file = dest_dir / src_file.name
-    # Do not do anything if file is already in the correct folder
+
+    if src_file == dest_file:
+        logger.debug(f'{src_file} already at {dest_file}')
+        return
+
+    # Warn if there is alrady a file in the destination
     if dest_file.is_file():
-        logger.warning(f'File exists: {dest_file}')
+        logger.error(f'{src_file} already at {dest_file}')
         return
 
     # If file is not in the correct folder, make the folder(s)
