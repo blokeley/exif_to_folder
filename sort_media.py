@@ -15,7 +15,7 @@ from typing import Iterator, Sequence
 
 import piexif
 
-__version__ = '1.4'
+__version__ = '1.5'
 
 # http://www.awaresystems.be/imaging/tiff/tifftags/privateifd/exif/datetimeoriginal.html
 DATETIME_ORIGINAL = 36867
@@ -36,6 +36,7 @@ IGNORED = (
     r'\.rss$',
     r'\.url$',
     r'\.pmp$',
+    r'^([^.]+)$',
     )
 """Sequence of directory and file names to ignore."""
 

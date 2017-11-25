@@ -55,11 +55,22 @@ class TestIgnore(unittest.TestCase):
             r'something.json',
             r'path\Thumbs.db',
             r'sort_media.log',
+            r'foo\bar',
         )
 
         for test in tests:
             with self.subTest(test=test):
                 self.assertTrue(sort_media.ignore(test))
+
+    def test_no_ignore(self):
+        tests = (
+            r'.foo\bar.jpg',
+            r'.2017\11\file.mp4',
+        )
+
+        for test in tests:
+            with self.subTest(test=test):
+                self.assertFalse(sort_media.ignore(test))
 
 
 if __name__ == '__main__':
