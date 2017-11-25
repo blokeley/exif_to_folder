@@ -1,4 +1,4 @@
-"""Copy or move images into year/month folders."""
+"""Copy or move images into year/month directories."""
 
 import argparse
 from datetime import date
@@ -15,7 +15,7 @@ from typing import Iterator, Sequence
 
 import piexif
 
-__version__ = '1.3'
+__version__ = '1.4'
 
 # http://www.awaresystems.be/imaging/tiff/tifftags/privateifd/exif/datetimeoriginal.html
 DATETIME_ORIGINAL = 36867
@@ -37,7 +37,7 @@ IGNORED = (
     r'\.url$',
     r'\.pmp$',
     )
-"""Sequence of folder and file names to ignore."""
+"""Sequence of directory and file names to ignore."""
 
 
 def parse_args() -> argparse.Namespace:
@@ -50,11 +50,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument('-m', '--mode', default='dryrun', help=msg,
                         choices=('move', 'copy', 'dryrun'))
 
-    msg = 'path of source folder.  Default is current folder.'
+    msg = 'path of source directory.  Default is current directory.'
     parser.add_argument('-s', '--src', default=os.curdir,
                         type=Path, help=msg)
 
-    msg = 'path of destination folder. Default is current folder.'
+    msg = 'path of destination directory. Default is current directory.'
     parser.add_argument('-d', '--dest', default=os.curdir,
                         type=Path, help=msg)
 
@@ -90,7 +90,7 @@ def get_paths(src_dir: Path) -> Iterator[Path]:
         for dirname in dirs:
             path = os.path.join(root, dirname)
             if ignore(path):
-                logger.debug(f'Ignoring folder: {path}')
+                logger.debug(f'Ignoring directory: {path}')
                 dirs.remove(dirname)
 
         for fname in files:
@@ -164,10 +164,10 @@ def copy(src_file: Path, dest_dir: Path, mode: str='dryrun') -> None:
         logger.error(f'{src_file} already at {dest_file}')
         return
 
-    # If file is not in the correct folder, make the folder(s)
+    # If file is not in the correct directory, make the directory(s)
     if not mode == 'dryrun':
         try:
-            dest_file.mkdir(parents=True, exist_ok=True)
+            dest_dir.mkdir(parents=True, exist_ok=True)
 
         except OSError:
             logger.exception(f'Cannot create {dest_dir}')
@@ -175,13 +175,22 @@ def copy(src_file: Path, dest_dir: Path, mode: str='dryrun') -> None:
 
     try:
         if mode == 'copy':
-            shutil.copy2(src_file, dest_file)
+            # If the destination filename is already a directory, change
+            # the filename to avoid a conflict
+            dest_file = avoid_conflict(dest_file)
+
+            shutil.copy2(str(src_file), str(dest_file))
             logger.info(f'Copied {src_file} to {dest_file}')
             return
 
         elif mode == 'move':
-            shutil.move(src_file, dest_file)
+            # If the destination filename is already a directory, change
+            # the filename to avoid a conflict
+            dest_file = avoid_conflict(dest_file)
+
+            shutil.move(str(src_file), str(dest_file))
             logger.info(f'Moved {src_file} to {dest_file}')
+            rmdirs(src_file)
             return
 
         else:
@@ -192,6 +201,25 @@ def copy(src_file: Path, dest_dir: Path, mode: str='dryrun') -> None:
     except OSError:
         logger.exception(f'Cannot copy or move {src_file} to {dest_file}')
         return
+
+
+def avoid_conflict(path: Path) -> Path:
+    """Add an underscore if path is already a directory."""
+    if path.is_dir():
+        return avoid_conflict(path.parent / Path('_' + path.name))
+
+    else:
+        return path
+
+
+def rmdirs(src_file: Path) -> None:
+    """Remove parent directories if empty."""
+    for parent in src_file.parents:
+        try:
+            os.rmdir(parent)
+
+        except OSError:
+            pass
 
 
 def main() -> int:
@@ -211,7 +239,7 @@ def main() -> int:
 
             except Exception:
                 try:
-                    # Try getting date from source folder name(s)
+                    # Try getting date from source directory name(s)
                     year, month = date_from_str(str(src_file.parent))
 
                 except Exception:
