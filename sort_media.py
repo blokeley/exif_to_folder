@@ -26,9 +26,9 @@ YEAR_MAX = date.today().year + 1
 YEAR_MIN = 1945
 
 IGNORED = (
-    r'^Picasa2',
-    r'^Picasa2Albums',
-    r'^\.Picasa3Temp',
+    r'Picasa2',
+    r'Picasa2Albums',
+    r'\.Picasa3Temp',
     r'\.ini$',
     r'\.db$',
     r'\.json$',

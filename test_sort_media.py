@@ -50,6 +50,8 @@ class TestIgnore(unittest.TestCase):
         tests = (
             r'.Picasa3Temp',
             r'.Picasa3Temp_1',
+            r'.Picasa3Temp_2\IMG_20130404_103602.jpg',
+            r'root\.Picasa3Temp_2\IMG_20130404_103602.jpg',
             r'Picasa2',
             r'Picasa2Albums',
             r'something.json',
