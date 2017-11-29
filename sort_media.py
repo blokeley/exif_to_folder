@@ -72,9 +72,9 @@ def setup_logging() -> None:
             logging.config.dictConfig(json.load(f))
 
     except FileNotFoundError:
-        debug = logging.INFO
+        level = logging.INFO
         fmt = r'%(asctime)s %(levelname)-8s %(message)s'
-        logging.basicConfig(level=debug, format=fmt, datefmt='%H:%M:%S')
+        logging.basicConfig(level=level, format=fmt, datefmt='%H:%M:%S')
 
 
 def ignore(path: str, *, ignored: Sequence[str]=IGNORED) -> bool:

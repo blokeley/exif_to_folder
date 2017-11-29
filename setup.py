@@ -65,7 +65,7 @@ setup(
         #   3 - Alpha
         #   4 - Beta
         #   5 - Production/Stable
-        'Development Status :: 4 - Beta',
+        'Development Status :: 5 - Production/Stable',
 
         # Indicate who your project is intended for
         'Intended Audience :: Developers',
@@ -93,6 +93,7 @@ setup(
 
     # Create executable script(s)
     entry_points={
-        'console_scripts': ['sort_media=sort_media:main'],
+        'console_scripts': ['sort_media=sort_media:main',
+                            'find_duplicates=find_duplicates:main'],
     }
 )
